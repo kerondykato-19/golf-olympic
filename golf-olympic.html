@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ゴルフオリンピック - ポイント計算</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .setup-section {
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        select, button {
+            padding: 10px 15px;
+            font-size: 14px;
+            border: 2px solid #2a5298;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select {
+            width: 100%;
+            max-width: 300px;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 5px rgba(42, 82, 152, 0.3);
+        }
+
+        button {
+            background: #2a5298;
+            color: white;
+            font-weight: bold;
+            border: none;
+        }
+
+        button:hover {
+            background: #1e3c72;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(30, 60, 114, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .player-count-btn {
+            flex: 1;
+            padding: 12px 15px;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .player-count-btn.active {
+            background: #1e3c72;
+            box-shadow: 0 4px 8px rgba(30, 60, 114, 0.4);
+        }
+
+        .error-message {
+            color: #d32f2f;
+            font-weight: bold;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .participants-section {
+            display: none;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .participants-section.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th {
+            background: #2a5298;
+            color: white;
+            padding: 10px 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: bold;
+            border: 1px solid #1e3c72;
+        }
+
+        td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        td:first-child {
+            text-align: left;
+            font-weight: bold;
+            color: #1e3c72;
+            min-width: 80px;
+        }
+
+        .score-select {
+            width: 100%;
+            padding: 6px 4px;
+            font-size: 12px;
+            border: 1px solid #2a5298;
+        }
+
+        .result-display {
+            font-weight: bold;
+            font-size: 16px;
+            padding: 4px;
+        }
+
+        .result-positive {
+            color: #2e7d32;
+        }
+
+        .result-negative {
+            color: #d32f2f;
+        }
+
+        .result-zero {
+            color: #666;
+        }
+
+        .reset-button {
+            margin-top: 20px;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 20px;
+                margin-bottom: 20px;
+            }
+
+            h2 {
+                font-size: 16px !important;
+            }
+
+            th {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
+
+            td {
+                padding: 8px 4px;
+                font-size: 13px;
+            }
+
+            .score-select {
+                padding: 4px 2px;
+                font-size: 11px;
+            }
+
+            .result-display {
+                font-size: 14px;
+            }
+
+            select, button {
+                padding: 8px 10px;
+                font-size: 13px;
+            }
+
+            .reset-button {
+                padding: 10px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⛳ ゴルフオリンピック - ポイント計算</h1>
+
+        <div class="setup-section">
+            <div class="form-group">
+                <label>参加人数を選択してください：</label>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button class="player-count-btn" onclick="selectPlayerCount('4')">4人</button>
+                    <button class="player-count-btn" onclick="selectPlayerCount('3')">3人</button>
+                    <button class="player-count-btn" onclick="selectPlayerCount('2')">2人</button>
+                </div>
+            </div>
+
+            <div id="nameSelectionSection" style="display: none;">
+                <div id="nameSelectionsContainer"></div>
+                <button id="confirmButton">参加決定</button>
+                <div id="errorMessage" class="error-message"></div>
+            </div>
+        </div>
+
+        <div id="participantsSection" class="participants-section">
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label for="rateSelect">レート設定：</label>
+                <select id="rateSelect">
+                    <option value="100">100倍</option>
+                    <option value="50">50倍</option>
+                </select>
+            </div>
+
+            <h2 style="color: #1e3c72; margin-bottom: 15px; font-size: 18px;">参加者のスコア入力</h2>
+            <table id="participantsList">
+                <thead>
+                    <tr>
+                        <th>参加者</th>
+                        <th>スコア</th>
+                        <th>得点</th>
+                        <th>最終得点</th>
+                    </tr>
+                </thead>
+                <tbody id="participantsBody"></tbody>
+            </table>
+            <button id="resetButton" class="reset-button">リセット</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM要素の取得
+        const nameSelectionSection = document.getElementById('nameSelectionSection');
+        const nameSelectionsContainer = document.getElementById('nameSelectionsContainer');
+        const confirmButton = document.getElementById('confirmButton');
+        const errorMessage = document.getElementById('errorMessage');
+        const participantsSection = document.getElementById('participantsSection');
+        const participantsList = document.getElementById('participantsList');
+        const resetButton = document.getElementById('resetButton');
+        const rateSelect = document.getElementById('rateSelect');
+
+        const allNames = {
+            4: ['杉山', '深谷', '加藤', '戸塚', '伊藤', 'ビジター１', 'ビジター２'],
+            3: ['杉山', '深谷', '加藤', '戸塚', '伊藤', 'ビジター１'],
+            2: ['杉山', '深谷', '加藤', '戸塚', '伊藤']
+        };
+
+        let selectedPlayers = [];
+        let playerElements = {}; // プレイヤー要素の参照を保存
+
+        // 人数選択関数（HTML属性のonclick用）
+        window.selectPlayerCount = function(count) {
+            handlePlayerCountChange(count);
+            // ボタンのアクティブ状態を更新
+            document.querySelectorAll('.player-count-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        };
+
+        function handlePlayerCountChange(count) {
+            errorMessage.style.display = 'none';
+            selectedPlayers = [];
+
+            if (!count) {
+                nameSelectionSection.style.display = 'none';
+                participantsSection.classList.remove('active');
+                return;
+            }
+
+            // 名前選択用プルダウンを作成
+            nameSelectionsContainer.innerHTML = '';
+            for (let i = 0; i < parseInt(count); i++) {
+                const div = document.createElement('div');
+                div.className = 'form-group';
+
+                const label = document.createElement('label');
+                label.textContent = `${i + 1}番目の参加者：`;
+
+                const select = document.createElement('select');
+                select.className = 'playerSelect';
+                select.dataset.index = i;
+
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = '-- 選択してください --';
+                select.appendChild(defaultOption);
+
+                allNames[count].forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    select.appendChild(option);
+                });
+
+                div.appendChild(label);
+                div.appendChild(select);
+                nameSelectionsContainer.appendChild(div);
+            }
+
+            nameSelectionSection.style.display = 'block';
+        }
+
+        // 参加決定ボタン
+        confirmButton.addEventListener('click', function() {
+            const selects = document.querySelectorAll('.playerSelect');
+            selectedPlayers = [];
+            let hasEmpty = false;
+            let hasDuplicate = false;
+
+            selects.forEach(select => {
+                if (select.value === '') {
+                    hasEmpty = true;
+                } else {
+                    selectedPlayers.push(select.value);
+                }
+            });
+
+            // 重複チェック
+            const uniquePlayers = new Set(selectedPlayers);
+            if (uniquePlayers.size !== selectedPlayers.length) {
+                hasDuplicate = true;
+            }
+
+            // エラーチェック
+            if (hasEmpty || hasDuplicate) {
+                errorMessage.style.display = 'block';
+                if (hasEmpty) {
+                    errorMessage.textContent = '⚠️ すべての参加者を選択してください';
+                } else if (hasDuplicate) {
+                    errorMessage.textContent = '⚠️ 同じ人が複数選ばれています。異なる人を選択してください。';
+                }
+                return;
+            }
+
+            // 参加者セクションを表示
+            displayParticipants();
+            participantsSection.classList.add('active');
+        });
+
+        function displayParticipants() {
+            const tbody = document.getElementById('participantsBody');
+            tbody.innerHTML = '';
+            playerElements = {}; // 要素参照をリセット
+
+            selectedPlayers.forEach((player) => {
+                const tr = document.createElement('tr');
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = player;
+
+                const scoreCell = document.createElement('td');
+                const scoreSelect = document.createElement('select');
+                scoreSelect.className = 'score-select';
+                scoreSelect.dataset.player = player;
+
+                for (let i = 0; i <= 30; i++) {
+                    const option = document.createElement('option');
+                    option.value = i;
+                    option.textContent = i;
+                    scoreSelect.appendChild(option);
+                }
+
+                scoreSelect.addEventListener('change', function() {
+                    updateResults();
+                });
+
+                scoreCell.appendChild(scoreSelect);
+
+                const resultCell = document.createElement('td');
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'result-display';
+                resultDiv.textContent = '0';
+                resultCell.appendChild(resultDiv);
+
+                const finalResultCell = document.createElement('td');
+                const finalResultDiv = document.createElement('div');
+                finalResultDiv.className = 'result-display';
+                finalResultDiv.textContent = '0';
+                finalResultCell.appendChild(finalResultDiv);
+
+                // プレイヤーごとの要素参照を保存
+                playerElements[player] = {
+                    scoreSelect: scoreSelect,
+                    resultDiv: resultDiv,
+                    finalResultDiv: finalResultDiv
+                };
+
+                tr.appendChild(nameCell);
+                tr.appendChild(scoreCell);
+                tr.appendChild(resultCell);
+                tr.appendChild(finalResultCell);
+                tbody.appendChild(tr);
+            });
+
+            // 初期表示のため計算を実行（DOM構築完了後に実行）
+            setTimeout(updateResults, 0);
+        }
+
+        function updateResults() {
+            const playerCount = selectedPlayers.length;
+            const scores = {};
+            const rate = parseInt(document.getElementById('rateSelect').value);
+
+            // 各プレイヤーのスコアを取得
+            selectedPlayers.forEach(player => {
+                if (playerElements[player] && playerElements[player].scoreSelect) {
+                    scores[player] = parseInt(playerElements[player].scoreSelect.value);
+                }
+            });
+
+            // 結果を計算して表示
+            selectedPlayers.forEach(player => {
+                const playerScore = scores[player] || 0;
+                let otherPlayersSum = 0;
+
+                selectedPlayers.forEach(otherPlayer => {
+                    if (otherPlayer !== player) {
+                        otherPlayersSum += (scores[otherPlayer] || 0);
+                    }
+                });
+
+                let result;
+                if (playerCount === 4) {
+                    result = playerScore * 3 - otherPlayersSum;
+                } else if (playerCount === 3) {
+                    result = playerScore * 2 - otherPlayersSum;
+                } else if (playerCount === 2) {
+                    result = playerScore * 2 - otherPlayersSum;
+                }
+
+                // レート適用後の最終得点
+                const finalResult = Math.round(result * rate);
+
+                // 得点表示
+                if (playerElements[player] && playerElements[player].resultDiv) {
+                    const resultDiv = playerElements[player].resultDiv;
+                    resultDiv.textContent = result;
+                    resultDiv.classList.remove('result-positive', 'result-negative', 'result-zero');
+                    if (result > 0) {
+                        resultDiv.classList.add('result-positive');
+                    } else if (result < 0) {
+                        resultDiv.classList.add('result-negative');
+                    } else {
+                        resultDiv.classList.add('result-zero');
+                    }
+                }
+
+                // 最終得点表示
+                if (playerElements[player] && playerElements[player].finalResultDiv) {
+                    const finalResultDiv = playerElements[player].finalResultDiv;
+                    finalResultDiv.textContent = finalResult;
+                    finalResultDiv.classList.remove('result-positive', 'result-negative', 'result-zero');
+                    if (finalResult > 0) {
+                        finalResultDiv.classList.add('result-positive');
+                    } else if (finalResult < 0) {
+                        finalResultDiv.classList.add('result-negative');
+                    } else {
+                        finalResultDiv.classList.add('result-zero');
+                    }
+                }
+            });
+        }
+
+        // レート変更時
+        rateSelect.addEventListener('change', function() {
+            updateResults();
+        });
+
+        // リセットボタン
+        resetButton.addEventListener('click', function() {
+            playerCount.value = '';
+            nameSelectionSection.style.display = 'none';
+            participantsSection.classList.remove('active');
+            selectedPlayers = [];
+            errorMessage.style.display = 'none';
+            rateSelect.value = '100';
+        });
+    </script>
+</body>
+</html>
