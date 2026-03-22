@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本株価監視</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 15px;
+            background: #fafafa;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: #667eea;
+            border-radius: 2px;
+            margin-right: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            background: #ff6b6b;
+        }
+
+        .btn-small:hover {
+            background: #ee5a52;
+        }
+
+        .stock-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .stock-item {
+            background: white;
+            padding: 12px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+
+        .stock-info {
+            display: flex;
+            gap: 15px;
+            flex: 1;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .stock-code {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 16px;
+            min-width: 60px;
+        }
+
+        .stock-name {
+            color: #666;
+            font-size: 13px;
+            min-width: 100px;
+        }
+
+        .stock-price {
+            color: #333;
+            font-weight: bold;
+            font-size: 14px;
+            min-width: 80px;
+        }
+
+        .stock-change {
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 60px;
+            text-align: center;
+        }
+
+        .change-up {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .change-down {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .stock-prevclose {
+            color: #999;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-inactive {
+            background: #e2e3e5;
+            color: #383d41;
+            border: 1px solid #d6d8db;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-left: 4px solid #28a745;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            max-width: 350px;
+            z-index: 1000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .popup.alert-high {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .popup.alert-critical {
+            border-left: 6px solid #ff0000;
+            background: #ffe6e6;
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.3);
+        }
+
+        .popup.alert-critical .popup-title {
+            color: #cc0000;
+        }
+
+        .popup-title {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .popup-content {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .popup-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .popup-label {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .popup-value {
+            color: #333;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close-btn:hover {
+            color: #333;
+            transform: none;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .empty-list {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-size: 13px;
+        }
+
+        .conditions {
+            background: #f0f4ff;
+            padding: 12px;
+            border-radius: 5px;
+            font-size: 13px;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        .conditions li {
+            margin-left: 20px;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .content {
+                padding: 15px;
+            }
+
+            .stock-info {
+                flex-direction: column;
+                gap: 5px;
+                align-items: flex-start;
+            }
+
+            .form-group {
+                flex-direction: column;
+            }
+
+            input[type="text"],
+            input[type="number"] {
+                min-width: 100%;
+            }
+
+            .popup {
+                left: 10px;
+                right: 10px;
+                top: auto;
+                bottom: 20px;
+                max-width: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 日本株価監視</h1>
+            <p>9:00～15:30 営業日自動監視</p>
+        </div>
+
+        <div class="content">
+            <!-- ステータス -->
+            <div class="section">
+                <div class="section-title">監視状態</div>
+                <div id="status" class="status status-inactive">初期化中...</div>
+            </div>
+
+            <!-- 新規銘柄追加 -->
+            <div class="section">
+                <div class="section-title">銘柄追加</div>
+                <div class="form-group">
+                    <input type="text" id="codeInput" placeholder="証券コード（例：6367）" maxlength="5">
+                    <input type="text" id="nameInput" placeholder="会社名（例：ダイキン）">
+                    <input type="number" id="prevCloseInput" placeholder="前営業日終値（¥）" step="0.01">
+                    <button onclick="addStock()">追加</button>
+                    <button onclick="testPopup()" style="background: #6c757d;">📋 ポップアップをテスト</button>
+                </div>
+                <div class="conditions">
+                    <strong>監視条件（以下いずれかで通知）:</strong>
+                    <ul>
+                        <li><strong>【5%変動】</strong></li>
+                        <li>前営業日終値から5%以上変動</li>
+                        <li>その日の始値から5%以上変動</li>
+                        <li>その日の高値から5%以上下落</li>
+                        <li>その日の安値から5%以上上昇</li>
+                        <li style="margin-top: 8px;"><strong>【7.5%変動】</strong></li>
+                        <li>前営業日終値から7.5%以上変動</li>
+                        <li>その日の始値から7.5%以上変動</li>
+                        <li>その日の高値から7.5%以上下落</li>
+                        <li>その日の安値から7.5%以上上昇</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 監視銘柄リスト -->
+            <div class="section">
+                <div class="section-title">監視銘柄</div>
+                <div id="stockList" class="stock-list">
+                    <div class="empty-list">銘柄を追加してください</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 日本の祝日リスト（2024-2025年）
+        const japaneseHolidays = [
+            '2024-01-01', '2024-01-08', '2024-02-11', '2024-02-12', '2024-03-20',
+            '2024-04-29', '2024-05-03', '2024-05-04', '2024-05-05', '2024-05-06',
+            '2024-07-15', '2024-08-11', '2024-09-16', '2024-09-22', '2024-09-23',
+            '2024-10-14', '2024-11-03', '2024-11-04', '2024-11-23',
+            '2025-01-01', '2025-01-13', '2025-02-11', '2025-03-20', '2025-04-29',
+            '2025-05-03', '2025-05-04', '2025-05-05', '2025-05-06', '2025-07-21',
+            '2025-08-11', '2025-09-15', '2025-09-23', '2025-10-13', '2025-11-03',
+            '2025-11-23', '2025-11-24'
+        ];
+
+        // グローバル変数
+        let stocks = [];
+        let monitoringInterval = null;
+
+        // LocalStorage から銘柄を読み込む
+        function loadStocks() {
+            const saved = localStorage.getItem('stocks');
+            stocks = saved ? JSON.parse(saved) : [];
+            if (stocks.length === 0) {
+                stocks = [
+                    { code: '6367', name: 'ダイキン', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6857', name: 'アドバンテスト', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '7309', name: 'シマノ', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6146', name: 'ディスコ', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '7735', name: 'スクリン', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '5801', name: '古河電気工業', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '7012', name: '川崎重工業', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '8035', name: '東京エレクトロン', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6920', name: 'レーザーテック', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '5803', name: 'フジクラ', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '285A', name: 'キオクシア', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6856', name: '堀場製作所', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6269', name: '三井海洋開発', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '5805', name: 'SWCC', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6504', name: '富士電機', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '6871', name: '日本マイクロニクス', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '4062', name: 'イビデン', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] },
+                    { code: '5713', name: '住友金属鉱山', prevClose: null, dayOpen: null, dayHigh: null, dayLow: null, currentPrice: null, lastUpdate: null, triggeredConditions: [] }
+                ];
+                saveStocks();
+            } else {
+                // 会社名を最新版に更新
+                const nameMap = {
+                    '6367': 'ダイキン',
+                    '6857': 'アドバンテスト',
+                    '7309': 'シマノ',
+                    '6146': 'ディスコ',
+                    '7735': 'スクリン',
+                    '5801': '古河電気工業',
+                    '7012': '川崎重工業',
+                    '8035': '東京エレクトロン',
+                    '6920': 'レーザーテック',
+                    '5803': 'フジクラ',
+                    '285A': 'キオクシア',
+                    '6856': '堀場製作所',
+                    '6269': '三井海洋開発',
+                    '5805': 'SWCC',
+                    '6504': '富士電機',
+                    '6871': '日本マイクロニクス',
+                    '4062': 'イビデン',
+                    '5713': '住友金属鉱山'
+                };
+                stocks.forEach(stock => {
+                    if (nameMap[stock.code]) {
+                        stock.name = nameMap[stock.code];
+                    }
+                });
+                saveStocks();
+            }
+        }
+
+        // LocalStorage に銘柄を保存
+        function saveStocks() {
+            localStorage.setItem('stocks', JSON.stringify(stocks));
+        }
+
+        // 日付がJSTで営業日かどうかをチェック
+        function isBusinessDay(date = new Date()) {
+            const jstDate = new Date(date.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            const dateStr = jstDate.toISOString().split('T')[0];
+
+            // 祝日チェック
+            if (japaneseHolidays.includes(dateStr)) return false;
+
+            // 土日チェック（0=日、6=土）
+            if (jstDate.getDay() === 0 || jstDate.getDay() === 6) return false;
+
+            return true;
+        }
+
+        // JSTで現在の営業時間内かをチェック
+        function isBusinessHours() {
+            const jstDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            const hours = jstDate.getHours();
+            const minutes = jstDate.getMinutes();
+            const totalMinutes = hours * 60 + minutes;
+
+            return totalMinutes >= 9 * 60 && totalMinutes < 15 * 30; // 9:00 ~ 15:30
+        }
+
+        // 状態を更新
+        function updateStatus() {
+            const status = document.getElementById('status');
+            const isBusiness = isBusinessDay();
+            const isHours = isBusinessHours();
+
+            if (!isBusiness) {
+                status.className = 'status status-inactive';
+                status.textContent = '❌ 営業日外: 監視停止中';
+            } else if (!isHours) {
+                status.className = 'status status-inactive';
+                status.textContent = '⏰ 営業時間外: 監視停止中（9:00～15:30）';
+            } else {
+                status.className = 'status status-active';
+                const jstDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+                status.textContent = `✅ 監視中: ${jstDate.toLocaleTimeString('ja-JP')}`;
+            }
+        }
+
+        // Yahoo Finance からデータ取得
+        async function fetchStockData(code) {
+            try {
+                // yfinance-api を使用（CORS対応）
+                const url = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${code}.T?modules=price`;
+                const response = await fetch(url);
+
+                if (!response.ok) throw new Error('API Error');
+
+                const data = await response.json();
+                const quote = data.quoteSummary.result[0].price;
+
+                return {
+                    currentPrice: quote.currentPrice || quote.regularMarketPrice || null,
+                    dayOpen: quote.regularMarketOpen || null,
+                    dayHigh: quote.regularMarketDayHigh || null,
+                    dayLow: quote.regularMarketDayLow || null,
+                    prevClose: quote.regularMarketPreviousClose || null
+                };
+            } catch (error) {
+                console.error(`Error fetching data for ${code}:`, error);
+                return null;
+            }
+        }
+
+        // 条件チェック（現在満たされている条件をすべて返す）
+        function checkConditions(stock) {
+            const currentConditions = [];
+            const current = stock.currentPrice;
+
+            if (!current) return currentConditions;
+
+            // 条件1: 前営業日終値より5%以上変動
+            if (stock.prevClose) {
+                const change1 = Math.abs((current - stock.prevClose) / stock.prevClose * 100);
+                if (change1 >= 5) {
+                    const direction = current > stock.prevClose ? '↑ 上昇' : '↓ 下落';
+                    currentConditions.push({
+                        type: '条件1',
+                        description: `前営業日終値(¥${stock.prevClose.toFixed(2)})から${change1.toFixed(1)}%${direction}`
+                    });
+                }
+            }
+
+            // 条件2: その日の始値より5%以上変動
+            if (stock.dayOpen) {
+                const change2 = Math.abs((current - stock.dayOpen) / stock.dayOpen * 100);
+                if (change2 >= 5) {
+                    const direction = current > stock.dayOpen ? '↑ 上昇' : '↓ 下落';
+                    currentConditions.push({
+                        type: '条件2',
+                        description: `本日始値(¥${stock.dayOpen.toFixed(2)})から${change2.toFixed(1)}%${direction}`
+                    });
+                }
+            }
+
+            // 条件3: その日の高値より5%以上下がった
+            if (stock.dayHigh) {
+                const change3 = ((stock.dayHigh - current) / stock.dayHigh * 100);
+                if (change3 >= 5) {
+                    currentConditions.push({
+                        type: '条件3',
+                        description: `本日高値(¥${stock.dayHigh.toFixed(2)})から${change3.toFixed(1)}%下落`
+                    });
+                }
+            }
+
+            // 条件4: その日の安値より5%以上上がった
+            if (stock.dayLow) {
+                const change4 = ((current - stock.dayLow) / stock.dayLow * 100);
+                if (change4 >= 5) {
+                    currentConditions.push({
+                        type: '条件4',
+                        description: `本日安値(¥${stock.dayLow.toFixed(2)})から${change4.toFixed(1)}%上昇`
+                    });
+                }
+            }
+
+            // 条件5: 前営業日終値より7.5%以上変動
+            if (stock.prevClose) {
+                const change5 = Math.abs((current - stock.prevClose) / stock.prevClose * 100);
+                if (change5 >= 7.5) {
+                    const direction = current > stock.prevClose ? '↑ 上昇' : '↓ 下落';
+                    currentConditions.push({
+                        type: '条件5',
+                        description: `前営業日終値(¥${stock.prevClose.toFixed(2)})から${change5.toFixed(1)}%${direction}`
+                    });
+                }
+            }
+
+            // 条件6: その日の始値より7.5%以上変動
+            if (stock.dayOpen) {
+                const change6 = Math.abs((current - stock.dayOpen) / stock.dayOpen * 100);
+                if (change6 >= 7.5) {
+                    const direction = current > stock.dayOpen ? '↑ 上昇' : '↓ 下落';
+                    currentConditions.push({
+                        type: '条件6',
+                        description: `本日始値(¥${stock.dayOpen.toFixed(2)})から${change6.toFixed(1)}%${direction}`
+                    });
+                }
+            }
+
+            // 条件7: その日の高値より7.5%以上下がった
+            if (stock.dayHigh) {
+                const change7 = ((stock.dayHigh - current) / stock.dayHigh * 100);
+                if (change7 >= 7.5) {
+                    currentConditions.push({
+                        type: '条件7',
+                        description: `本日高値(¥${stock.dayHigh.toFixed(2)})から${change7.toFixed(1)}%下落`
+                    });
+                }
+            }
+
+            // 条件8: その日の安値より7.5%以上上がった
+            if (stock.dayLow) {
+                const change8 = ((current - stock.dayLow) / stock.dayLow * 100);
+                if (change8 >= 7.5) {
+                    currentConditions.push({
+                        type: '条件8',
+                        description: `本日安値(¥${stock.dayLow.toFixed(2)})から${change8.toFixed(1)}%上昇`
+                    });
+                }
+            }
+
+            return currentConditions;
+        }
+
+        // 新たに満たされた条件のみを取得（前回は満たさず、今回満たした）
+        function getNewlyTriggeredConditions(stock, currentConditions) {
+            const newConditions = [];
+            const previousTypes = stock.triggeredConditions.map(c => c.type);
+
+            currentConditions.forEach(condition => {
+                if (!previousTypes.includes(condition.type)) {
+                    newConditions.push(condition);
+                }
+            });
+
+            return newConditions;
+        }
+
+        // ポップアップを表示
+        function showPopup(stock, alert) {
+            const popup = document.createElement('div');
+
+            // 条件5～8（7.5%）と条件1～4（5%）で異なるスタイルを適用
+            const isLargeChange = ['条件5', '条件6', '条件7', '条件8'].includes(alert.type);
+            popup.className = isLargeChange ? 'popup alert-critical' : 'popup alert-high';
+
+            const changePercent = stock.prevClose
+                ? ((stock.currentPrice - stock.prevClose) / stock.prevClose * 100)
+                : 0;
+
+            // 現在の日時をJSTで取得
+            const jstDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            const year = jstDate.getFullYear();
+            const month = String(jstDate.getMonth() + 1).padStart(2, '0');
+            const day = String(jstDate.getDate()).padStart(2, '0');
+            const hours = String(jstDate.getHours()).padStart(2, '0');
+            const minutes = String(jstDate.getMinutes()).padStart(2, '0');
+            const dateTimeStr = `${year}/${month}/${day} ${hours}:${minutes}`;
+
+            popup.innerHTML = `
+                <button class="close-btn" onclick="this.parentElement.remove();">×</button>
+                <div class="popup-title">${isLargeChange ? '🔴 ' : '🚨 '} ${stock.name} (${stock.code})</div>
+                <div class="popup-content">
+                    <div class="popup-row" style="font-size: 10px; color: #999; margin-bottom: 8px;">
+                        <span>${dateTimeStr}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-label">現在株価:</span>
+                        <span class="popup-value">¥${stock.currentPrice.toFixed(2)}</span>
+                    </div>
+                    <div class="popup-row">
+                        <span class="popup-label">変動率:</span>
+                        <span class="popup-value">${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%</span>
+                    </div>
+                    <div style="border-top: 1px solid #ddd; margin-top: 8px; padding-top: 8px;">
+                        <div style="font-size: 11px; color: #666;">【${alert.type}】${isLargeChange ? ' <strong>⚡大変動</strong>' : ''}</div>
+                        <div style="font-size: 12px; color: #333;">${alert.description}</div>
+                    </div>
+                </div>
+            `;
+
+            // 3秒後に自動削除
+            document.body.appendChild(popup);
+            setTimeout(() => popup.remove(), 5000);
+        }
+
+        // 監視ループ
+        async function monitorStocks() {
+            if (!isBusinessDay() || !isBusinessHours()) {
+                updateStatus();
+                return;
+            }
+
+            updateStatus();
+
+            // 現在の日付（JST）を取得
+            const jstDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }));
+            const today = jstDate.toISOString().split('T')[0];
+
+            for (let stock of stocks) {
+                // 営業日が変わったら triggeredConditions をリセット
+                if (stock.lastCheckDate && stock.lastCheckDate !== today) {
+                    stock.triggeredConditions = [];
+                }
+                stock.lastCheckDate = today;
+
+                const data = await fetchStockData(stock.code);
+
+                if (data) {
+                    stock.currentPrice = data.currentPrice;
+                    stock.dayOpen = stock.dayOpen || data.dayOpen;
+                    stock.dayHigh = stock.dayHigh || data.dayHigh;
+                    stock.dayLow = stock.dayLow || data.dayLow;
+                    if (!stock.prevClose) stock.prevClose = data.prevClose;
+                    stock.lastUpdate = new Date().toLocaleTimeString('ja-JP');
+
+                    // 現在満たされている条件をチェック
+                    const currentConditions = checkConditions(stock);
+
+                    // 新たに満たされた条件のみを取得
+                    const newConditions = getNewlyTriggeredConditions(stock, currentConditions);
+
+                    // 新たに満たされた条件のみでポップアップを表示
+                    for (let alert of newConditions) {
+                        showPopup(stock, alert);
+                    }
+
+                    // triggeredConditions を現在の条件で更新
+                    stock.triggeredConditions = currentConditions;
+                }
+            }
+
+            saveStocks();
+            renderStocks();
+        }
+
+        // 銘柄リストを描画
+        function renderStocks() {
+            const list = document.getElementById('stockList');
+
+            if (stocks.length === 0) {
+                list.innerHTML = '<div class="empty-list">銘柄を追加してください</div>';
+                return;
+            }
+
+            list.innerHTML = stocks.map(stock => {
+                let changeHTML = '';
+                if (stock.currentPrice && stock.prevClose) {
+                    const changePercent = ((stock.currentPrice - stock.prevClose) / stock.prevClose * 100);
+                    const isPositive = changePercent >= 0;
+                    changeHTML = `<span class="stock-change ${isPositive ? 'change-up' : 'change-down'}">${isPositive ? '+' : ''}${changePercent.toFixed(2)}%</span>`;
+                }
+
+                let prevCloseHTML = '';
+                if (stock.prevClose) {
+                    prevCloseHTML = `<div class="stock-prevclose">前営業日: ¥${stock.prevClose.toFixed(2)}</div>`;
+                }
+
+                return `
+                    <div class="stock-item">
+                        <div class="stock-info">
+                            <div class="stock-code">${stock.code}</div>
+                            <div class="stock-name">${stock.name}</div>
+                            <div class="stock-price">¥${stock.currentPrice ? stock.currentPrice.toFixed(2) : 'N/A'}</div>
+                            ${changeHTML}
+                            ${prevCloseHTML}
+                        </div>
+                        <button class="btn-small" onclick="removeStock('${stock.code}')">削除</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 銘柄を追加
+        function addStock() {
+            const code = document.getElementById('codeInput').value.trim();
+            const name = document.getElementById('nameInput').value.trim();
+            const prevClose = parseFloat(document.getElementById('prevCloseInput').value);
+
+            if (!code || !name) {
+                alert('証券コードと会社名を入力してください');
+                return;
+            }
+
+            if (stocks.some(s => s.code === code)) {
+                alert('この銘柄は既に追加されています');
+                return;
+            }
+
+            stocks.push({
+                code,
+                name,
+                prevClose: prevClose || null,
+                dayOpen: null,
+                dayHigh: null,
+                dayLow: null,
+                currentPrice: null,
+                lastUpdate: null,
+                triggeredConditions: []
+            });
+
+            saveStocks();
+            renderStocks();
+
+            document.getElementById('codeInput').value = '';
+            document.getElementById('nameInput').value = '';
+            document.getElementById('prevCloseInput').value = '';
+
+            // すぐにデータ取得
+            monitorStocks();
+        }
+
+        // 銘柄を削除
+        function removeStock(code) {
+            stocks = stocks.filter(s => s.code !== code);
+            saveStocks();
+            renderStocks();
+        }
+
+        // ポップアップをテスト表示
+        function testPopup() {
+            const testStock = {
+                code: '6367',
+                name: 'ダイキン',
+                currentPrice: 2150.50,
+                prevClose: 2000.00
+            };
+
+            const testAlerts = [
+                {
+                    type: '条件1',
+                    description: '前営業日終値(¥2000.00)から5.0%↑ 上昇'
+                },
+                {
+                    type: '条件5',
+                    description: '前営業日終値(¥2000.00)から7.5%↑ 上昇'
+                }
+            ];
+
+            testAlerts.forEach((alert, index) => {
+                setTimeout(() => {
+                    showPopup(testStock, alert);
+                }, index * 1200); // 1.2秒間隔でポップアップ表示
+            });
+        }
+
+        // 初期化
+        function init() {
+            loadStocks();
+            renderStocks();
+            updateStatus();
+
+            // 毎分状態を更新
+            setInterval(updateStatus, 30000);
+
+            // 5分ごとに監視（営業時間内）
+            monitorStocks();
+            monitoringInterval = setInterval(monitorStocks, 5 * 60 * 1000);
+        }
+
+        // ページロード時に初期化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
