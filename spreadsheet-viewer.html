@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Googleスプレッドシート ビューア</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .auth-section {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        #googleSignInButton {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #4285f4;
+            color: white;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        #googleSignInButton:hover {
+            background: #357ae8;
+        }
+
+        #signOutButton {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background: #ea4335;
+            color: white;
+            font-weight: bold;
+            transition: background 0.3s;
+            display: none;
+        }
+
+        #signOutButton:hover {
+            background: #c5221f;
+        }
+
+        .user-info {
+            text-align: center;
+            margin-bottom: 30px;
+            display: none;
+            padding: 15px;
+            background: #f0f4ff;
+            border-radius: 5px;
+        }
+
+        .user-info.active {
+            display: block;
+        }
+
+        .user-info p {
+            color: #333;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            display: none;
+        }
+
+        .table-wrapper.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            border-bottom: 2px solid #667eea;
+            border-right: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        th:last-child {
+            border-right: none;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+        }
+
+        td:last-child {
+            border-right: none;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .empty-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            display: none;
+        }
+
+        .empty-message.active {
+            display: block;
+        }
+
+        /* 縦方向リスト表示のスタイル */
+        .data-list {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .data-list.active {
+            display: block;
+        }
+
+        .data-item {
+            display: flex;
+            padding: 15px;
+            border-bottom: 1px solid #ddd;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .data-item:last-child {
+            border-bottom: none;
+        }
+
+        .data-item:hover {
+            background: #f5f5f5;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #667eea;
+            min-width: 120px;
+            word-break: break-word;
+        }
+
+        .data-value {
+            flex: 1;
+            color: #333;
+            word-break: break-word;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📅 予定表ビューア</h1>
+        <p class="subtitle">Googleスプレッドシートのデータを表示します</p>
+
+        <div class="auth-section">
+            <button id="googleSignInButton">Googleでログイン</button>
+            <button id="signOutButton">ログアウト</button>
+        </div>
+
+        <div class="user-info" id="userInfo">
+            <p>ログイン中: <strong id="userEmail"></strong></p>
+        </div>
+
+        <div class="error" id="errorMessage"></div>
+
+        <div class="date-selector" id="dateSelector" style="display: none;">
+            <div style="display: flex; gap: 10px; justify-content: center; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <label for="dateDropdown" style="font-weight: bold; color: #333;">日付を選択：</label>
+                <select id="dateDropdown" style="padding: 8px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 5px;">
+                    <option value="">-- 日付を選択 --</option>
+                </select>
+                <button id="decideButton" style="padding: 8px 20px; font-size: 14px; border: none; border-radius: 5px; background: #667eea; color: white; cursor: pointer; font-weight: bold;">決定</button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>データを読み込み中...</p>
+        </div>
+
+        <div class="empty-message" id="emptyMessage">
+            データがまだ読み込まれていません
+        </div>
+
+        <div class="data-list" id="dataList"></div>
+
+        <div class="table-wrapper" id="tableWrapper">
+            <table id="dataTable">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Google APIスクリプト -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <script>
+        // ===== 設定値 =====
+        const CLIENT_ID = '407584108559-oei44bmm2a0bunom4s9dcu89hsnpd13b.apps.googleusercontent.com';
+        const SPREADSHEET_ID = '1veWgkjjRGr4ntVHNJ6tyu0-ltsiQn9tANczxLlagyy4';
+        const SHEET_NAME = '予定表';
+        const API_KEY = '';
+
+        let tokenClient;
+        let accessToken = null;
+        let allSpreadsheetData = null; // すべてのスプレッドシートデータを保持
+
+        // ===== 初期化 =====
+        window.onload = function() {
+            initializeGoogleAPI();
+        };
+
+        function initializeGoogleAPI() {
+            gapi.load('client', function() {
+                gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+                }).then(function() {
+                    console.log('Google Sheets API initialized');
+                    initializeGoogleSignIn();
+                }).catch(function(error) {
+                    console.error('Error initializing API:', error);
+                    showError('APIの初期化に失敗しました');
+                });
+            });
+        }
+
+        function initializeGoogleSignIn() {
+            // ボタンイベント
+            document.getElementById('googleSignInButton').addEventListener('click', handleSignIn);
+            document.getElementById('signOutButton').addEventListener('click', handleSignOut);
+
+            // Google Sign-In Client初期化
+            if (typeof google !== 'undefined' && google.accounts) {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/spreadsheets.readonly',
+                    callback: handleTokenResponse,
+                });
+                console.log('Google Sign-In initialized');
+            } else {
+                showError('Googleライブラリが読み込まれません');
+            }
+        }
+
+        // ===== 認証処理 =====
+        function handleSignIn() {
+            if (!tokenClient) {
+                showError('認証機能が初期化されていません。ページを再読み込みしてください。');
+                return;
+            }
+
+            if (accessToken) {
+                loadSpreadsheetData();
+            } else {
+                tokenClient.requestAccessToken();
+            }
+        }
+
+        function handleTokenResponse(response) {
+            if (response.error !== undefined) {
+                showError('トークン取得エラー: ' + response.error);
+                return;
+            }
+
+            accessToken = response.access_token;
+            updateAuthUI();
+            loadSpreadsheetData();
+        }
+
+        function handleSignOut() {
+            accessToken = null;
+            try {
+                google.accounts.id.revoke(accessToken);
+            } catch(e) {
+                console.log('Revoke error:', e);
+            }
+            updateAuthUI();
+            clearTable();
+        }
+
+        function updateAuthUI() {
+            if (accessToken) {
+                document.getElementById('googleSignInButton').textContent = 'データを読み込む';
+                document.getElementById('signOutButton').style.display = 'inline-block';
+                document.getElementById('userInfo').classList.add('active');
+                fetchUserInfo();
+            } else {
+                document.getElementById('googleSignInButton').textContent = 'Googleでログイン';
+                document.getElementById('signOutButton').style.display = 'none';
+                document.getElementById('userInfo').classList.remove('active');
+                document.getElementById('userEmail').textContent = '';
+            }
+        }
+
+        function fetchUserInfo() {
+            fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + accessToken)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('userEmail').textContent = data.email;
+                })
+                .catch(error => console.log('User info fetch error:', error));
+        }
+
+        // ===== 日付ドロップダウン作成 =====
+        function populateDateDropdown(values) {
+            const dateDropdown = document.getElementById('dateDropdown');
+            const dateSelector = document.getElementById('dateSelector');
+            const decideButton = document.getElementById('decideButton');
+
+            // ドロップダウンをリセット
+            dateDropdown.innerHTML = '<option value="">-- 日付を選択 --</option>';
+
+            // 日付リストを抽出（ユニークな日付）
+            const uniqueDates = new Map(); // 日付をキーとして、行データを保存
+
+            for (let i = 1; i < values.length; i++) {
+                if (values[i].length === 0) continue;
+
+                const dateStr = values[i][0];
+                const parsedDate = parseDate(dateStr);
+
+                if (parsedDate && !uniqueDates.has(dateStr)) {
+                    uniqueDates.set(dateStr, i); // 日付と行番号をマップ
+                }
+            }
+
+            // 今日の日付を取得
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 日付を将来と過去に分類
+            const futureDates = [];
+            const pastDates = [];
+
+            Array.from(uniqueDates.keys()).forEach(dateStr => {
+                const parsedDate = parseDate(dateStr);
+                if (parsedDate >= today) {
+                    futureDates.push({ dateStr, parsedDate });
+                } else {
+                    pastDates.push({ dateStr, parsedDate });
+                }
+            });
+
+            // 将来の日付は昇順（近い順）
+            futureDates.sort((a, b) => a.parsedDate - b.parsedDate);
+
+            // 過去の日付は降順（最新順）
+            pastDates.sort((a, b) => b.parsedDate - a.parsedDate);
+
+            // ドロップダウンに日付を追加（将来 → 過去）
+            futureDates.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.dateStr;
+                option.textContent = item.dateStr;
+                dateDropdown.appendChild(option);
+            });
+
+            pastDates.forEach(item => {
+                const option = document.createElement('option');
+                option.value = item.dateStr;
+                option.textContent = item.dateStr;
+                dateDropdown.appendChild(option);
+            });
+
+            // 日付セレクターを表示
+            dateSelector.style.display = 'block';
+            clearTable();
+
+            // 「決定」ボタンのイベントリスナー
+            decideButton.onclick = function() {
+                const selectedDate = dateDropdown.value;
+                if (!selectedDate) {
+                    showError('日付を選択してください');
+                    return;
+                }
+
+                // 選択された日付のデータを表示
+                const rowIndex = uniqueDates.get(selectedDate);
+                displaySelectedDate(values, rowIndex);
+            };
+        }
+
+        // ===== 選択された日付のデータを表示（縦方向リスト形式） =====
+        function displaySelectedDate(values, rowIndex) {
+            const dataList = document.getElementById('dataList');
+            dataList.innerHTML = '';
+            hideError();
+
+            // A-K列（11列）のデータを縦に表示
+            for (let col = 0; col < Math.min(11, values[0].length); col++) {
+                const label = values[0][col] || `列${col + 1}`;
+                const value = values[rowIndex][col] || '';
+
+                // データ項目を作成
+                const dataItem = document.createElement('div');
+                dataItem.className = 'data-item';
+
+                // ラベル
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'data-label';
+                labelDiv.textContent = label;
+
+                // 値
+                const valueDiv = document.createElement('div');
+                valueDiv.className = 'data-value';
+                valueDiv.textContent = value;
+
+                dataItem.appendChild(labelDiv);
+                dataItem.appendChild(valueDiv);
+                dataList.appendChild(dataItem);
+            }
+
+            // テーブルは非表示、リストを表示
+            document.getElementById('tableWrapper').classList.remove('active');
+            dataList.classList.add('active');
+            document.getElementById('emptyMessage').classList.remove('active');
+        }
+
+        // ===== スプレッドシート読み込み =====
+        function loadSpreadsheetData() {
+            if (!accessToken) {
+                showError('ログインしてください');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            const range = `'${SHEET_NAME}'!A1:Z1000`;
+
+            gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: range,
+            }).then(function(response) {
+                showLoading(false);
+                const values = response.result.values;
+
+                if (!values || values.length === 0) {
+                    showEmpty();
+                    return;
+                }
+
+                // すべてのデータを保存
+                allSpreadsheetData = values;
+
+                // 日付リストを抽出してドロップダウンに表示
+                populateDateDropdown(values);
+            }).catch(function(error) {
+                showLoading(false);
+                showError('読み込みエラー: ' + error.message);
+                console.error('Error:', error);
+            });
+        }
+
+        // ===== テーブル表示 =====
+        function displayTable(values) {
+            const thead = document.querySelector('#dataTable thead');
+            const tbody = document.querySelector('#dataTable tbody');
+
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            if (values.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            // ヘッダー行を表示
+            const headerRow = document.createElement('tr');
+            values[0].forEach(cell => {
+                const th = document.createElement('th');
+                th.textContent = cell || '';
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+
+            // 今日の日付を取得
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // 将来の日付のみをフィルタリング
+            const futureRows = [];
+            for (let i = 1; i < values.length; i++) {
+                if (values[i].length === 0) continue;
+
+                const dateStr = values[i][0];
+                const parsedDate = parseDate(dateStr);
+
+                if (parsedDate && parsedDate >= today) {
+                    futureRows.push({
+                        date: parsedDate,
+                        data: values[i]
+                    });
+                }
+            }
+
+            // 日付でソート（昇順）
+            futureRows.sort((a, b) => a.date - b.date);
+
+            // テーブルに行を追加（直近の1件のみ）
+            if (futureRows.length === 0) {
+                showEmpty();
+                return;
+            }
+
+            // 最初の1件のみを表示
+            const row = futureRows[0];
+            const tr = document.createElement('tr');
+            row.data.forEach(cell => {
+                const td = document.createElement('td');
+                td.textContent = cell || '';
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+
+            document.getElementById('tableWrapper').classList.add('active');
+            document.getElementById('emptyMessage').classList.remove('active');
+        }
+
+        // ===== 日付パース関数 =====
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+
+            // 複数の日付形式に対応
+            // YYYY/MM/DD, YYYY-MM-DD, MM/DD, M/D など
+            let date = null;
+
+            // YYYY/MM/DD または YYYY-MM-DD 形式
+            if (/^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}$/.test(dateStr)) {
+                date = new Date(dateStr.replace(/\//g, '-'));
+            }
+            // MM/DD 形式（年なし）
+            else if (/^\d{1,2}\/\d{1,2}$/.test(dateStr)) {
+                const parts = dateStr.split('/');
+                const month = parseInt(parts[0], 10) - 1;
+                const day = parseInt(parts[1], 10);
+                date = new Date(new Date().getFullYear(), month, day);
+            }
+            // 数値のシリアル値（Excelの日付形式）
+            else if (/^\d+$/.test(dateStr)) {
+                const serialNum = parseInt(dateStr, 10);
+                if (serialNum > 0) {
+                    // Excelのシリアル値：1900年1月1日が1
+                    date = new Date((serialNum - 1) * 24 * 60 * 60 * 1000 + new Date('1900-01-01').getTime());
+                }
+            }
+
+            if (date && !isNaN(date.getTime())) {
+                return date;
+            }
+
+            return null;
+        }
+
+        // ===== UI制御 =====
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('errorMessage').classList.remove('active');
+        }
+
+        function showEmpty() {
+            document.getElementById('tableWrapper').classList.remove('active');
+            document.getElementById('emptyMessage').classList.add('active');
+        }
+
+        function clearTable() {
+            document.querySelector('#dataTable thead').innerHTML = '';
+            document.querySelector('#dataTable tbody').innerHTML = '';
+            document.getElementById('dataList').innerHTML = '';
+            document.getElementById('tableWrapper').classList.remove('active');
+            document.getElementById('dataList').classList.remove('active');
+            document.getElementById('emptyMessage').classList.add('active');
+        }
+    </script>
+</body>
+</html>
